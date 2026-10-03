@@ -1,0 +1,15 @@
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m001","author_id":"u_alice","content":"hey everyone, welcome to the server","created_at":"2026-09-10T09:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m002","author_id":"u_bob","content":"good morning! excited to be here","created_at":"2026-09-10T09:05:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m003","author_id":"u_carol","content":"help me reset my password, I lost access to the account","created_at":"2026-09-11T10:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m004","author_id":"u_alice","content":"sure, open settings and click reset password","created_at":"2026-09-11T10:04:00.000Z"}
+{"type":"reaction","guild_id":"demo","channel_id":"help","message_id":"m004","author_id":"u_carol","target_author_id":"u_alice","created_at":"2026-09-11T10:05:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m005","author_id":"u_bob","content":"my build keeps failing with a missing module error","created_at":"2026-09-12T11:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m006","author_id":"u_carol","content":"run npm install first, that usually fixes it","created_at":"2026-09-12T11:03:00.000Z"}
+{"type":"reaction","guild_id":"demo","channel_id":"help","message_id":"m006","author_id":"u_bob","target_author_id":"u_carol","created_at":"2026-09-12T11:04:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m007","author_id":"u_carol","content":"weekend plans anyone?","created_at":"2026-09-13T18:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m008","author_id":"u_alice","content":"hiking, weather looks great","created_at":"2026-09-13T18:02:00.000Z"}
+{"type":"voice","guild_id":"demo","user_id":"u_alice","minutes":42.5,"created_at":"2026-09-13T19:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m009","author_id":"u_bob","content":"help me reset my password on the staging box too","created_at":"2026-09-14T08:30:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"help","channel_kind":"help","message_id":"m010","author_id":"u_alice","content":"same flow works there, settings then reset","created_at":"2026-09-14T08:35:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m011","author_id":"u_bob","content":"thanks all, back online","created_at":"2026-09-14T09:00:00.000Z"}
+{"type":"message","guild_id":"demo","channel_id":"general","channel_kind":"text","message_id":"m012","author_id":"u_carol","content":"nice work team","created_at":"2026-09-14T09:10:00.000Z"}
