@@ -9,7 +9,9 @@ into insight.
 
 - **Engagement scoring** — per-member score from messages, reactions given /
   received, and voice minutes, with 30-day recency decay.
-- **Churn / lifecycle signals** — members who went silent after being active.
+- **Churn / lifecycle signals** — members who went silent after being active,
+  plus a per-member lifecycle stage (`new` / `active` / `at-risk` / `churned` /
+  `dormant` / `unknown`) shown in the report, the dashboard, and the API.
 - **Channel health** — 7-day activity trend vs the prior 7 days, reply ratios,
   and unanswered-question rates for help channels.
 - **Knowledge archive** — help/forum channels archived and full-text searchable
@@ -67,6 +69,8 @@ node bin/guildsight.js report --guild demo
 # 1. u_alice score=4.40
 # ...
 # CHURN RISK
+# LIFECYCLE
+# new=0 active=3 at-risk=0 churned=0 dormant=0 unknown=0
 # CHANNEL HEALTH
 # general kind=text trend=up (100%) reply_ratio=0 unanswered_7d=0
 ```
@@ -99,15 +103,15 @@ The bot only persists activity — it never posts, reacts, or sends DMs.
 
 ```bash
 node bin/guildsight.js --version
-# 0.1.0
+# 0.1.1
 ```
 
 ## Dashboard
 
 | Page        | Description                                              |
 |-------------|----------------------------------------------------------|
-| `/`         | Overview: top members, churn-risk count, channel summary |
-| `/members`  | Engagement leaderboard (score, activity, churn flag)     |
+| `/`         | Overview: top members, churn-risk count, channel summary, lifecycle breakdown |
+| `/members`  | Engagement leaderboard (score, lifecycle stage, activity, churn flag) |
 | `/channels` | Channel health (trend, reply ratio, unanswered)          |
 | `/archive`  | Full-text search over help/forum history                 |
 
@@ -116,8 +120,8 @@ Append `?guild=<id>` to focus a specific server. JSON equivalents:
 | Endpoint          | Description                                  |
 |-------------------|----------------------------------------------|
 | `GET /api/health` | `{"ok":true}` liveness check                 |
-| `GET /api/overview` | Totals + top members + churn-risk members  |
-| `GET /api/members`  | Full engagement leaderboard                |
+| `GET /api/overview` | Totals + top members + churn-risk members + `lifecycle_summary` |
+| `GET /api/members`  | Full engagement leaderboard (each row carries `lifecycle`) |
 | `GET /api/channels` | Channel health rows                        |
 | `GET /api/search?q=<query>` | Archive search results             |
 
@@ -127,6 +131,13 @@ Append `?guild=<id>` to focus a specific server. JSON equivalents:
   multiplied by `0.5^(days_since_last_seen / 30)` (30-day half-life).
 - **Churn risk** = `last_seen` more than 14 days ago **and** `message_count >= 20`
   (was active, now silent).
+- **Lifecycle stage** — one of six, evaluated most-severe first:
+  - `churned`: silent > 14 days with `message_count >= 20` (matches churn risk)
+  - `dormant`: silent > 30 days (any activity level)
+  - `at-risk`: silent 7–14 days with `message_count >= 20` (leading indicator)
+  - `new`: `first_seen` within the last 7 days
+  - `active`: everything else
+  - `unknown`: no `last_seen` recorded
 - **Channel health** = message count this 7 days vs the prior 7 days
   (`up` / `down` / `flat`); help channels additionally report the share of
   questions with no reply within 48 hours.

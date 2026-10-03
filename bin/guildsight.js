@@ -145,6 +145,12 @@ function report(args) {
       out.push(`${m.user_id} last_seen=${m.last_seen}`);
     });
 
+  out.push('LIFECYCLE');
+  const lifecycleCounts = scoring.lifecycleSummary(members, now);
+  out.push(
+    scoring.LIFECYCLE_STAGES.map((stage) => `${stage}=${lifecycleCounts[stage]}`).join(' ')
+  );
+
   out.push('CHANNEL HEALTH');
   channels
     .slice()

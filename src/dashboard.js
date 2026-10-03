@@ -98,6 +98,7 @@ function memberRows(guildId, now = new Date()) {
       return {
         user_id: m.user_id,
         score: Math.round(scoring.engagementScore(m, now) * 100) / 100,
+        lifecycle: scoring.lifecycleStage(m, now),
         message_count: m.message_count || 0,
         reactions_given: m.reactions_given || 0,
         reactions_received: m.reactions_received || 0,
@@ -169,6 +170,7 @@ function overviewData(guildId, now = new Date()) {
     },
     top_members: members.slice(0, 10),
     churn_risk: churn,
+    lifecycle_summary: scoring.lifecycleSummary(members, now),
   };
 }
 
@@ -270,6 +272,8 @@ function renderOverview(data) {
     )
     .join('');
   const s = data.channel_health_summary;
+  const lc = data.lifecycle_summary || {};
+  const lcCards = scoring.LIFECYCLE_STAGES.map((stage) => card(stage, lc[stage] == null ? '—' : lc[stage])).join('\n  ');
   return `
 <div class="cards">
   ${card('members', t.members)}
@@ -278,6 +282,10 @@ function renderOverview(data) {
   ${card('messages', t.messages)}
   ${card('voice minutes', fmt(t.voice_minutes))}
   ${card('unanswered 7d', t.unanswered_7d)}
+</div>
+<h2>Member lifecycle</h2>
+<div class="cards">
+  ${lcCards}
 </div>
 <h2>Channel health</h2>
 <p class="muted">${escapeHtml(s.up)} up · ${escapeHtml(s.flat)} flat · ${escapeHtml(s.down)} down · ${escapeHtml(s.help_or_forum)} help/forum channel(s) with ${escapeHtml(s.help_or_forum_unanswered)} unanswered</p>
@@ -293,6 +301,7 @@ function renderMembers(rows, guildId) {
     .map(
       (m) =>
         `<tr><td>${escapeHtml(m.user_id)}</td><td class="num">${escapeHtml(fmt(m.score))}</td>` +
+        `<td>${escapeHtml(m.lifecycle || 'unknown')}</td>` +
         `<td class="num">${escapeHtml(m.message_count)}</td><td>${escapeHtml(daysAgoLabel(m.days_since_last_seen))}</td>` +
         `<td>${m.churn_risk ? '<span class="flag">yes</span>' : '<span class="muted">no</span>'}</td></tr>`
     )
@@ -300,8 +309,8 @@ function renderMembers(rows, guildId) {
   return `<h2>Engagement leaderboard</h2>
 <p class="muted">Score = 1.0·messages + 0.5·reactions given + 0.7·reactions received + 0.05·voice minutes, decayed with a 30-day half-life.</p>
 <table>
-  <thead><tr><th>User</th><th class="num">Score</th><th class="num">Messages</th><th>Last seen</th><th>Churn risk</th></tr></thead>
-  <tbody>${body || '<tr><td colspan="5" class="muted">No members recorded.</td></tr>'}</tbody>
+  <thead><tr><th>User</th><th class="num">Score</th><th>Stage</th><th class="num">Messages</th><th>Last seen</th><th>Churn risk</th></tr></thead>
+  <tbody>${body || '<tr><td colspan="6" class="muted">No members recorded.</td></tr>'}</tbody>
 </table>
 <p class="muted">Guild ${escapeHtml(guildId == null ? '—' : guildId)}</p>`;
 }

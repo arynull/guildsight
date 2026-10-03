@@ -24,6 +24,30 @@ function isChurnRisk(member, now = new Date()) {
   return daysSince(member.last_seen, now) > 14 && (member.message_count || 0) >= 20;
 }
 
+/**
+ * Lifecycle stage for a single member, evaluated against `now`.
+ *
+ * The stages are mutually exclusive and checked most-severe first, so a member
+ * who has gone quiet after a long active run reports `churned`/`dormant` rather
+ * than the softer `at-risk`, and `new` never masks a member who is already
+ * silent. `unknown` covers rows the collector has seen but never timestamped.
+ *
+ * @param {object} member
+ * @param {Date} [now]
+ * @returns {'new'|'active'|'at-risk'|'churned'|'dormant'|'unknown'}
+ */
+function lifecycleStage(member, now = new Date()) {
+  if (!member || !member.last_seen) return 'unknown';
+  const silent = daysSince(member.last_seen, now);
+  const messages = member.message_count || 0;
+
+  if (silent > 14 && messages >= 20) return 'churned';
+  if (silent > 30) return 'dormant';
+  if (silent > 7 && messages >= 20) return 'at-risk';
+  if (member.first_seen && daysSince(member.first_seen, now) <= 7) return 'new';
+  return 'active';
+}
+
 function channelHealth(ch) {
   const msg7d = ch.msg_7d || 0;
   const prev = ch.msg_prev_7d || 0;
@@ -37,9 +61,30 @@ function channelHealth(ch) {
   };
 }
 
+/** Stage order used by every summary surface (least to most severe). */
+const LIFECYCLE_STAGES = ['new', 'active', 'at-risk', 'churned', 'dormant', 'unknown'];
+
+/**
+ * Per-stage member counts, always keyed by every stage in `LIFECYCLE_STAGES` so
+ * summaries have a stable shape (a stage with no members reports 0, not absent).
+ * @param {object[]} members
+ * @param {Date} [now]
+ * @returns {Record<string, number>}
+ */
+function lifecycleSummary(members, now = new Date()) {
+  const counts = Object.fromEntries(LIFECYCLE_STAGES.map((stage) => [stage, 0]));
+  for (const m of members || []) {
+    counts[lifecycleStage(m, now)] += 1;
+  }
+  return counts;
+}
+
 module.exports = {
   daysSince,
   engagementScore,
   isChurnRisk,
+  lifecycleStage,
+  lifecycleSummary,
+  LIFECYCLE_STAGES,
   channelHealth,
 };
