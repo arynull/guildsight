@@ -1,0 +1,18 @@
+node_modules/
+tests/
+coverage/
+.env
+.telegram.env
+*.log
+.DS_Store
+dist/
+
+# internal ops files (local only)
+MISSION.md
+SPEC.md
+RUNBOOK.md
+PROGRESS.md
+ERROR_LOG.md
+prompts/
+
+data/

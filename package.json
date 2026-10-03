@@ -1,0 +1,41 @@
+{
+  "name": "guildsight",
+  "version": "0.1.0",
+  "description": "Self-hosted Discord community intelligence: engagement analytics, churn signals, and a searchable archive of community knowledge.",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "guildsight": "bin/guildsight.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "fixtures",
+    "scripts"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bin/guildsight.js dashboard",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "lint": "eslint .",
+    "smoke": "bash scripts/smoke.sh"
+  },
+  "keywords": [
+    "discord",
+    "analytics",
+    "community",
+    "engagement",
+    "sqlite"
+  ],
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.29.0",
+    "globals": "^15.15.0"
+  }
+}
