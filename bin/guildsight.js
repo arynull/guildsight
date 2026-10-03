@@ -14,6 +14,8 @@ function usage() {
     '  ingest --fixture <file.jsonl>   Load a JSONL event log',
     '  report --guild <guild_id>       Engagement, churn risk, channel health',
     '  search <query>                  Search the help/forum archive',
+    '  dashboard [--port N] [--host H] Serve the local dashboard (default 127.0.0.1:3000)',
+    '  bot                             Run the read-only gateway collector (needs GUILDSIGHT_BOT_TOKEN)',
     '  --version                       Print version',
   ].join('\n');
 }
@@ -30,7 +32,7 @@ function readFlag(args, name) {
 }
 
 function readPositional(args) {
-  const flags = new Set(['--fixture', '--guild']);
+  const flags = new Set(['--fixture', '--guild', '--port', '--host']);
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (flags.has(args[i])) {
@@ -171,6 +173,28 @@ function search(args) {
   return 0;
 }
 
+function dashboard(args) {
+  // Required lazily: the dashboard is a local server and needs no Discord code.
+  const { startDashboard } = require('../src/dashboard');
+  const port = readFlag(args, '--port');
+  const host = readFlag(args, '--host');
+  if (port != null && !/^\d+$/.test(port)) fail(`--port must be a number, got "${port}"`);
+  startDashboard({ port, host });
+  // The server keeps the event loop alive; db stays open for the process lifetime.
+  return 0;
+}
+
+function bot() {
+  // Required lazily so the rest of the CLI never loads discord.js.
+  const { startBot } = require('../src/bot');
+  try {
+    startBot();
+  } catch (err) {
+    fail(err.message, 1);
+  }
+  return 0;
+}
+
 function main(argv) {
   const args = argv.slice(2);
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
@@ -182,6 +206,8 @@ function main(argv) {
     return 0;
   }
   const cmd = args[0];
+  // Long-running surfaces keep the DB handle open; short-lived ones close it.
+  const keepAlive = cmd === 'dashboard' || cmd === 'bot';
   let code = 0;
   try {
     switch (cmd) {
@@ -194,13 +220,25 @@ function main(argv) {
       case 'search':
         code = search(args.slice(1));
         break;
+      case 'dashboard':
+        code = dashboard(args.slice(1));
+        break;
+      case 'bot':
+        code = bot();
+        break;
       default:
         fail(`unknown command "${cmd}"\n\n${usage()}`);
     }
   } finally {
-    db.closeDb();
+    if (!keepAlive) db.closeDb();
   }
-  return code;
+  return { code, keepAlive };
 }
 
-process.exit(main(process.argv));
+const result = main(process.argv);
+if (result.keepAlive) {
+  // dashboard/bot own the event loop (listener / gateway session): do not exit.
+  process.exitCode = result.code;
+} else {
+  process.exit(result.code);
+}
