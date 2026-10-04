@@ -13,6 +13,8 @@ SPEC.md
 RUNBOOK.md
 PROGRESS.md
 ERROR_LOG.md
+RESEARCH.md
 prompts/
 
 data/
+.aider*
