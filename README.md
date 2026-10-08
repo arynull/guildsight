@@ -15,7 +15,7 @@ into insight.
 - **Channel health** — 7-day activity trend vs the prior 7 days, reply ratios,
   and unanswered-question rates for help channels.
 - **Knowledge archive** — help/forum channels archived and full-text searchable
-  (SQLite FTS5).
+  (SQLite FTS5), with match snippets.
 - **Local dashboard** — Express app bound to `127.0.0.1`, with HTML pages and a
   JSON API. No accounts, no cloud.
 
@@ -79,9 +79,15 @@ node bin/guildsight.js report --guild demo
 
 ```bash
 node bin/guildsight.js search "reset password"
-# m004 | u_alice | 2026-09-11T10:04:00.000Z | sure, open settings and click reset password
-# m009 | u_bob | 2026-09-14T08:30:00.000Z | help me reset my password on the staging box too
-# m003 | u_carol | 2026-09-11T10:00:00.000Z | help me reset my password, I lost access to the account
+# m004 | u_alice | 2026-09-11T10:04:00.000Z | help | sure, open settings and click reset password
+# m009 | u_bob | 2026-09-14T08:30:00.000Z | help | help me reset my password on the staging box too
+# m003 | u_carol | 2026-09-11T10:00:00.000Z | help | help me reset my password, I lost access to the account
+```
+
+Scope the search to one channel:
+
+```bash
+node bin/guildsight.js search "reset password" --channel help
 ```
 
 **Serve the dashboard** (local only, `127.0.0.1`):
@@ -103,7 +109,7 @@ The bot only persists activity — it never posts, reacts, or sends DMs.
 
 ```bash
 node bin/guildsight.js --version
-# 0.1.1
+# 0.1.2
 ```
 
 ## Dashboard
@@ -113,7 +119,7 @@ node bin/guildsight.js --version
 | `/`         | Overview: top members, churn-risk count, channel summary, lifecycle breakdown |
 | `/members`  | Engagement leaderboard (score, lifecycle stage, activity, churn flag) |
 | `/channels` | Channel health (trend, reply ratio, unanswered)          |
-| `/archive`  | Full-text search over help/forum history                 |
+| `/archive`  | Full-text search over help/forum history, with channel filter and match highlighting |
 
 Append `?guild=<id>` to focus a specific server. JSON equivalents:
 
@@ -123,7 +129,7 @@ Append `?guild=<id>` to focus a specific server. JSON equivalents:
 | `GET /api/overview` | Totals + top members + churn-risk members + `lifecycle_summary` |
 | `GET /api/members`  | Full engagement leaderboard (each row carries `lifecycle`) |
 | `GET /api/channels` | Channel health rows                        |
-| `GET /api/search?q=<query>` | Archive search results             |
+| `GET /api/search?q=<query>&channel=<id>&limit=<N>` | Archive search results (each row carries a `snippet` excerpt) |
 
 ## Scoring
 

@@ -31,6 +31,16 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function highlightSnippet(snippet, query) {
+  const escaped = escapeHtml(snippet);
+  const tokens = String(query).match(/[\p{L}\p{N}]+/gu) || [];
+  const uniq = [...new Set(tokens)].sort((a, b) => b.length - a.length);
+  const parts = uniq.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (parts.length === 0) return escaped;
+  const re = new RegExp('(' + parts.join('|') + ')', 'giu');
+  return escaped.replace(re, '<mark>$1</mark>');
+}
+
 /** Guild ids that have any data, deterministic order. */
 function listGuilds() {
   return db
@@ -174,16 +184,17 @@ function overviewData(guildId, now = new Date()) {
   };
 }
 
-function searchData(guildId, q, limit = 20) {
+function searchData(guildId, q, limit = 20, opts = {}) {
   const query = String(q == null ? '' : q).trim();
   if (!query) return { query, results: [] };
-  const results = db.searchArchive(guildId, query, limit).map((r) => ({
+  const results = db.searchArchive(guildId, query, limit, { channelId: opts.channelId }).map((r) => ({
     message_id: r.message_id,
     guild_id: r.guild_id,
     channel_id: r.channel_id,
     author_id: r.author_id,
     content: r.content,
     created_at: r.created_at,
+    snippet: r.snippet,
   }));
   return { query, results };
 }
@@ -332,13 +343,21 @@ function renderChannels(rows) {
 </table>`;
 }
 
-function renderArchive(guildId, data) {
+function renderArchive(guildId, data, channels, activeChannel) {
   const hidden = guildId == null ? '' : `<input type="hidden" name="guild" value="${escapeHtml(guildId)}">`;
+  const options =
+    '<option value="">All channels</option>' +
+    (channels || [])
+      .map(
+        (c) =>
+          `<option value="${escapeHtml(c.channel_id)}"${c.channel_id === activeChannel ? ' selected' : ''}>${escapeHtml(c.channel_id)} (${escapeHtml(c.kind)})</option>`
+      )
+      .join('');
   const results = data.results
     .map(
       (r) =>
         `<div class="msg"><div class="meta">${escapeHtml(r.created_at)} · ${escapeHtml(r.channel_id)} · ${escapeHtml(r.author_id)}</div>` +
-        `${escapeHtml(String(r.content || '').slice(0, 400))}</div>`
+        `<div>${highlightSnippet(r.snippet || r.content || '', data.query)}</div></div>`
     )
     .join('');
   const status = !data.query
@@ -350,6 +369,7 @@ function renderArchive(guildId, data) {
 <form class="search" method="get" action="/archive">
   ${hidden}
   <input type="text" name="q" value="${escapeHtml(data.query)}" placeholder="e.g. reset password" aria-label="Search query">
+  <select name="channel">${options}</select>
   <button type="submit">Search</button>
 </form>
 ${status}`;
@@ -387,7 +407,8 @@ function createApp({ now = () => new Date() } = {}) {
     const guildId = resolveGuildId(req);
     const limitRaw = Number(req.query.limit);
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 100) : 20;
-    res.json({ guild_id: guildId, ...searchData(guildId, req.query.q, limit) });
+    const channel = typeof req.query.channel === 'string' && req.query.channel.trim() !== '' ? req.query.channel.trim() : undefined;
+    res.json({ guild_id: guildId, ...searchData(guildId, req.query.q, limit, { channelId: channel }) });
   });
 
   const html = (res, body) => res.type('html').send(body);
@@ -434,13 +455,15 @@ function createApp({ now = () => new Date() } = {}) {
 
   app.get('/archive', (req, res) => {
     const guildId = resolveGuildId(req);
+    const channelId = typeof req.query.channel === 'string' && req.query.channel.trim() !== '' ? req.query.channel.trim() : undefined;
+    const channels = guildId == null ? [] : db.getDb().prepare("SELECT channel_id, kind FROM channels WHERE guild_id = ? AND kind IN ('help','forum') ORDER BY channel_id").all(guildId);
     html(
       res,
       layout({
         title: 'Archive',
         guildId,
         active: 'archive',
-        body: guildPickerNote(guildId) + renderArchive(guildId, searchData(guildId, req.query.q)),
+        body: guildPickerNote(guildId) + renderArchive(guildId, searchData(guildId, req.query.q, 20, { channelId }), channels, channelId),
       })
     );
   });
@@ -454,7 +477,6 @@ function createApp({ now = () => new Date() } = {}) {
 
 /**
  * Boot the dashboard.
- * @param {object} [opts]
  * @param {number} [opts.port] default: PORT env or 3000
  * @param {string} [opts.host] default: HOST env or 127.0.0.1
  * @returns {import('node:http').Server}

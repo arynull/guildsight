@@ -170,26 +170,41 @@ function toFtsQuery(query) {
     .join(' ');
 }
 
-function searchArchive(guildId, query, limit = 20) {
+function searchArchive(guildId, query, limit = 20, opts = {}) {
   const ftsQuery = toFtsQuery(query);
   if (!ftsQuery) return [];
   const d = getDb();
   const guildFilter = guildId != null ? 'AND m.guild_id = ?' : '';
-  const params = guildId != null ? [ftsQuery, guildId, limit] : [ftsQuery, limit];
+  const channelId = opts && typeof opts.channelId === 'string' && opts.channelId !== '' ? opts.channelId : undefined;
+  const channelFilter = channelId != null ? 'AND m.channel_id = ?' : '';
+  const params = [ftsQuery];
+  if (guildId != null) params.push(guildId);
+  if (channelId != null) params.push(channelId);
+  params.push(limit);
   try {
     return d
       .prepare(
-        `SELECT m.message_id, m.guild_id, m.channel_id, m.author_id, m.content, m.created_at
+        `SELECT m.message_id, m.guild_id, m.channel_id, m.author_id, m.content, m.created_at, snippet(messages_fts, 0, CHAR(1), CHAR(2), CHAR(8230), 20) AS snippet_raw
          FROM messages_fts
          JOIN messages m ON m.rowid = messages_fts.rowid
          JOIN channels c ON c.guild_id = m.guild_id AND c.channel_id = m.channel_id
          WHERE messages_fts MATCH ?
          ${guildFilter}
+         ${channelFilter}
          AND c.kind IN ('help', 'forum')
          ORDER BY rank
          LIMIT ?`
       )
-      .all(...params);
+      .all(...params)
+      .map((row) => ({
+        message_id: row.message_id,
+        guild_id: row.guild_id,
+        channel_id: row.channel_id,
+        author_id: row.author_id,
+        content: row.content,
+        created_at: row.created_at,
+        snippet: String(row.snippet_raw ?? '').replaceAll(String.fromCharCode(1), '').replaceAll(String.fromCharCode(2), '').replace(/\s+/g, ' ').trim().slice(0, 160),
+      }));
   } catch (_err) {
     return [];
   }

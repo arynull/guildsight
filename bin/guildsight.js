@@ -13,7 +13,7 @@ function usage() {
     'Commands:',
     '  ingest --fixture <file.jsonl>   Load a JSONL event log',
     '  report --guild <guild_id>       Engagement, churn risk, channel health',
-    '  search <query>                  Search the help/forum archive',
+    '  search <query> [--channel <channel_id>]   Search the help/forum archive',
     '  dashboard [--port N] [--host H] Serve the local dashboard (default 127.0.0.1:3000)',
     '  bot                             Run the read-only gateway collector (needs GUILDSIGHT_BOT_TOKEN)',
     '  --version                       Print version',
@@ -32,7 +32,7 @@ function readFlag(args, name) {
 }
 
 function readPositional(args) {
-  const flags = new Set(['--fixture', '--guild', '--port', '--host']);
+  const flags = new Set(['--fixture', '--guild', '--port', '--host', '--channel']);
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (flags.has(args[i])) {
@@ -171,10 +171,10 @@ function report(args) {
 function search(args) {
   const query = readPositional(args).join(' ').trim();
   if (!query) fail('search requires a query');
-  const rows = db.searchArchive(null, query, 20);
+  const channelId = readFlag(args, '--channel');
+  const rows = db.searchArchive(null, query, 20, { channelId: channelId || undefined });
   for (const row of rows) {
-    const content = String(row.content || '').replace(/\s+/g, ' ').slice(0, 120);
-    process.stdout.write(`${row.message_id} | ${row.author_id} | ${row.created_at} | ${content}\n`);
+    process.stdout.write(`${row.message_id} | ${row.author_id} | ${row.created_at} | ${row.channel_id} | ${String(row.snippet || '')}\n`);
   }
   return 0;
 }
