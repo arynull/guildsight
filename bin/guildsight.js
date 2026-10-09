@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const pkg = require('../package.json');
 const db = require('../src/lib/db');
 const scoring = require('../src/lib/scoring');
+const digest = require('../src/lib/digest');
 
 function usage() {
   return [
@@ -13,6 +14,7 @@ function usage() {
     'Commands:',
     '  ingest --fixture <file.jsonl>   Load a JSONL event log',
     '  report --guild <guild_id>       Engagement, churn risk, channel health',
+    '  digest --guild <guild_id>     Weekly digest: top members, churn risk, lifecycle, channel health',
     '  search <query> [--channel <channel_id>]   Search the help/forum archive',
     '  dashboard [--port N] [--host H] Serve the local dashboard (default 127.0.0.1:3000)',
     '  bot                             Run the read-only gateway collector (needs GUILDSIGHT_BOT_TOKEN)',
@@ -179,6 +181,41 @@ function search(args) {
   return 0;
 }
 
+function digestCmd(args) {
+  const guildId = readFlag(args, '--guild');
+  if (!guildId) fail('digest requires --guild <guild_id>');
+  const now = new Date();
+  const d = digest.buildWeeklyDigest(
+    { members: db.getMembers(guildId), channels: db.getChannels(guildId) },
+    now
+  );
+  const out = [];
+  out.push(`WEEKLY DIGEST -- ${guildId} (last ${d.window_days} days, generated ${d.generated_at})`);
+  out.push('LIFECYCLE');
+  out.push(scoring.LIFECYCLE_STAGES.map((stage) => `${stage}=${d.lifecycle[stage]}`).join(' '));
+  out.push('TOP MEMBERS');
+  d.top_members.forEach((row, i) => {
+    out.push(`${i + 1}. ${row.user_id} score=${formatNumber(row.score)}`);
+  });
+  out.push('CHURN RISK');
+  d.churn_risk.forEach((id) => {
+    out.push(id);
+  });
+  out.push('NEW THIS WEEK');
+  d.new_this_week.forEach((id) => {
+    out.push(id);
+  });
+  out.push('CHANNEL HEALTH');
+  d.channels.forEach((ch) => {
+    out.push(
+      `${ch.channel_id} kind=${ch.kind} trend=${ch.trend} (${formatNumber(Math.round(ch.trend_pct))}%) ` +
+        `reply_ratio=${formatNumber(ch.reply_ratio)} unanswered_7d=${ch.unanswered_7d}`
+    );
+  });
+  process.stdout.write(out.join('\n') + '\n');
+  return 0;
+}
+
 function dashboard(args) {
   // Required lazily: the dashboard is a local server and needs no Discord code.
   const { startDashboard } = require('../src/dashboard');
@@ -225,6 +262,9 @@ function main(argv) {
         break;
       case 'search':
         code = search(args.slice(1));
+        break;
+      case 'digest':
+        code = digestCmd(args.slice(1));
         break;
       case 'dashboard':
         code = dashboard(args.slice(1));

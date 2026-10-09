@@ -16,6 +16,7 @@ into insight.
   and unanswered-question rates for help channels.
 - **Knowledge archive** — help/forum channels archived and full-text searchable
   (SQLite FTS5), with match snippets.
+- **Weekly digest** — paste-ready community summary: top members, churn risk, lifecycle mix, channel health
 - **Local dashboard** — Express app bound to `127.0.0.1`, with HTML pages and a
   JSON API. No accounts, no cloud.
 
@@ -73,6 +74,24 @@ node bin/guildsight.js report --guild demo
 # new=0 active=3 at-risk=0 churned=0 dormant=0 unknown=0
 # CHANNEL HEALTH
 # general kind=text trend=up (100%) reply_ratio=0 unanswered_7d=0
+```
+
+**Weekly digest** — paste-ready summary (lifecycle, top members, churn risk,
+new members, channel health):
+
+```bash
+node bin/guildsight.js digest --guild demo
+# WEEKLY DIGEST -- demo (last 7 days, generated 2026-10-09T10:21:39.497Z)
+# LIFECYCLE
+# new=0 active=3 at-risk=0 churned=0 dormant=0 unknown=0
+# TOP MEMBERS
+# 1. u_alice score=3.82
+# 2. u_carol score=2.92
+# CHURN RISK
+# NEW THIS WEEK
+# CHANNEL HEALTH
+# general kind=text trend=up (100%) reply_ratio=0 unanswered_7d=0
+# help kind=help trend=up (100%) reply_ratio=0 unanswered_7d=0
 ```
 
 **Search the archive** (help/forum channels only):

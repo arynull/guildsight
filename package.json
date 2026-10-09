@@ -1,6 +1,6 @@
 {
   "name": "guildsight",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Self-hosted Discord community intelligence: engagement analytics, churn signals, and a searchable archive of community knowledge.",
   "license": "MIT",
   "main": "src/index.js",
