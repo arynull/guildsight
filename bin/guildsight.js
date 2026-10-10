@@ -15,7 +15,7 @@ function usage() {
     '  ingest --fixture <file.jsonl>   Load a JSONL event log',
     '  report --guild <guild_id>       Engagement, churn risk, channel health',
     '  digest --guild <guild_id>     Weekly digest: top members, churn risk, lifecycle, channel health',
-    '  search <query> [--channel <channel_id>]   Search the help/forum archive',
+    '  search <query> [--channel <channel_id>] [--limit N]   Search the help/forum archive',
     '  dashboard [--port N] [--host H] Serve the local dashboard (default 127.0.0.1:3000)',
     '  bot                             Run the read-only gateway collector (needs GUILDSIGHT_BOT_TOKEN)',
     '  --version                       Print version',
@@ -34,7 +34,7 @@ function readFlag(args, name) {
 }
 
 function readPositional(args) {
-  const flags = new Set(['--fixture', '--guild', '--port', '--host', '--channel']);
+  const flags = new Set(['--fixture', '--guild', '--port', '--host', '--channel', '--limit']);
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (flags.has(args[i])) {
@@ -174,7 +174,15 @@ function search(args) {
   const query = readPositional(args).join(' ').trim();
   if (!query) fail('search requires a query');
   const channelId = readFlag(args, '--channel');
-  const rows = db.searchArchive(null, query, 20, { channelId: channelId || undefined });
+  const limitRaw = readFlag(args, '--limit');
+  let limit = 20;
+  if (limitRaw != null) {
+    if (!/^\d+$/.test(limitRaw) || parseInt(limitRaw, 10) <= 0) {
+      fail(`--limit must be a positive integer, got "${limitRaw}"`);
+    }
+    limit = parseInt(limitRaw, 10);
+  }
+  const rows = db.searchArchive(null, query, limit, { channelId: channelId || undefined });
   for (const row of rows) {
     process.stdout.write(`${row.message_id} | ${row.author_id} | ${row.created_at} | ${row.channel_id} | ${String(row.snippet || '')}\n`);
   }
