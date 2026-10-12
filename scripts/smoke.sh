@@ -16,6 +16,26 @@ node "$ROOT/bin/guildsight.js" report --guild demo
 echo "== search =="
 node "$ROOT/bin/guildsight.js" search "help me"
 
+echo "== digest (all members) =="
+DIGEST="$(node "$ROOT/bin/guildsight.js" digest --guild demo)"
+echo "$DIGEST"
+for who in u_alice u_bob u_carol; do
+  echo "$DIGEST" | grep -q "$who" || { echo "smoke FAIL: digest missing $who" >&2; exit 1; }
+done
+
+echo "== digest --top 1 =="
+TOP1="$(node "$ROOT/bin/guildsight.js" digest --guild demo --top 1)"
+echo "$TOP1"
+TOP_ROWS="$(printf '%s\n' "$TOP1" | sed -n '/^TOP MEMBERS$/,/^CHURN RISK$/p' | grep -Ec '^[0-9]+\. ')"
+[ "$TOP_ROWS" -eq 1 ] || { echo "smoke FAIL: digest --top 1 produced $TOP_ROWS top-member row(s)" >&2; exit 1; }
+
+echo "== digest --top abc (must reject) =="
+if node "$ROOT/bin/guildsight.js" digest --guild demo --top abc >/dev/null 2>&1; then
+  echo "smoke FAIL: digest --top abc should exit non-zero" >&2
+  exit 1
+fi
+echo "digest --top abc: rejected"
+
 echo "== dashboard =="
 DASH_PORT="${DASH_PORT:-$(node -e 'const s=require("node:net").createServer();s.listen(0,"127.0.0.1",()=>{console.log(s.address().port);s.close();});')}"
 DASH_LOG="$SCRATCH/dashboard.log"
@@ -51,7 +71,13 @@ fi
 # Loopback-only: the listener socket must be bound to 127.0.0.1 (ground truth via ss;
 # a TCP connect test is unreliable here because the sandbox egress proxy intercepts
 # outbound connections).
-BOUND="$(ss -ltn "sport = :$DASH_PORT" 2>/dev/null | awk 'NR>1 {print $4}' | head -1)"
+if command -v ss >/dev/null 2>&1; then
+  BOUND="$(ss -ltn "sport = :$DASH_PORT" 2>/dev/null | awk 'NR>1 {print $4}' | head -1)"
+else
+  # fallback without ss: check /proc/net/tcp for a LISTEN socket on DASH_PORT
+  HEXPORT=$(printf '%04X' "$DASH_PORT")
+  BOUND=$(awk -v p="$HEXPORT" '$4 == "0A" && $2 ~ (":"p"$") {found=1} END {if (found) print "127.0.0.1:'"$DASH_PORT"' (via /proc)"}' /proc/net/tcp /proc/net/tcp6 2>/dev/null | head -1)
+fi
 if [ -z "$BOUND" ]; then echo "smoke FAIL: no listener found on port $DASH_PORT" >&2; exit 1; fi
 echo "$BOUND" | grep -q "^127\.0\.0\.1:" \
   || { echo "smoke FAIL: dashboard bound to $BOUND (expected 127.0.0.1)" >&2; exit 1; }

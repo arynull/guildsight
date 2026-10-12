@@ -14,7 +14,7 @@ function usage() {
     'Commands:',
     '  ingest --fixture <file.jsonl>   Load a JSONL event log',
     '  report --guild <guild_id>       Engagement, churn risk, channel health',
-    '  digest --guild <guild_id>     Weekly digest: top members, churn risk, lifecycle, channel health',
+    '  digest --guild <guild_id> [--top N]   Weekly digest: top members, churn risk, lifecycle, channel health',
     '  search <query> [--channel <channel_id>] [--limit N]   Search the help/forum archive',
     '  dashboard [--port N] [--host H] Serve the local dashboard (default 127.0.0.1:3000)',
     '  bot                             Run the read-only gateway collector (needs GUILDSIGHT_BOT_TOKEN)',
@@ -34,7 +34,7 @@ function readFlag(args, name) {
 }
 
 function readPositional(args) {
-  const flags = new Set(['--fixture', '--guild', '--port', '--host', '--channel', '--limit']);
+  const flags = new Set(['--fixture', '--guild', '--port', '--host', '--channel', '--limit', '--top']);
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (flags.has(args[i])) {
@@ -192,9 +192,17 @@ function search(args) {
 function digestCmd(args) {
   const guildId = readFlag(args, '--guild');
   if (!guildId) fail('digest requires --guild <guild_id>');
+  const topRaw = readFlag(args, '--top');
+  let topLimit;
+  if (args.includes('--top')) {
+    if (topRaw == null || !/^\d+$/.test(topRaw) || parseInt(topRaw, 10) <= 0) {
+      fail(`--top must be a positive integer, got "${topRaw == null ? '' : topRaw}"`);
+    }
+    topLimit = parseInt(topRaw, 10);
+  }
   const now = new Date();
   const d = digest.buildWeeklyDigest(
-    { members: db.getMembers(guildId), channels: db.getChannels(guildId) },
+    { members: db.getMembers(guildId), channels: db.getChannels(guildId), topLimit },
     now
   );
   const out = [];

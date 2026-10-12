@@ -2,7 +2,7 @@
 
 const scoring = require('./scoring');
 
-function buildWeeklyDigest({ members, channels } = {}, now = new Date()) {
+function buildWeeklyDigest({ members, channels, topLimit } = {}, now = new Date()) {
   const listMembers = Array.isArray(members) ? members.slice() : [];
   const listChannels = Array.isArray(channels) ? channels.slice() : [];
   const effectiveNow = now instanceof Date ? now : new Date(now);
@@ -27,7 +27,8 @@ function buildWeeklyDigest({ members, channels } = {}, now = new Date()) {
     }
     return 0;
   });
-  const topMembers = scored.slice(0, 5).map((e) => {
+  const memberLimit = Number.isInteger(topLimit) && topLimit > 0 ? topLimit : scored.length;
+  const topMembers = scored.slice(0, memberLimit).map((e) => {
     return {
       user_id: e.user_id,
       score: e.score

@@ -77,7 +77,9 @@ node bin/guildsight.js report --guild demo
 ```
 
 **Weekly digest** — paste-ready summary (lifecycle, top members, churn risk,
-new members, channel health):
+new members, channel health). Every member is listed by default; `--top N`
+caps the top-members rows to the top `N` members (`N` must be a positive
+integer).
 
 ```bash
 node bin/guildsight.js digest --guild demo
@@ -85,13 +87,20 @@ node bin/guildsight.js digest --guild demo
 # LIFECYCLE
 # new=0 active=3 at-risk=0 churned=0 dormant=0 unknown=0
 # TOP MEMBERS
-# 1. u_alice score=3.82
-# 2. u_carol score=2.92
+# 1. u_alice score=3.56
+# 2. u_carol score=2.71
+# 3. u_bob score=2.35
 # CHURN RISK
 # NEW THIS WEEK
 # CHANNEL HEALTH
 # general kind=text trend=up (100%) reply_ratio=0 unanswered_7d=0
 # help kind=help trend=up (100%) reply_ratio=0 unanswered_7d=0
+```
+
+Show only the single top member:
+
+```bash
+node bin/guildsight.js digest --guild demo --top 1
 ```
 
 **Search the archive** (help/forum channels only):
